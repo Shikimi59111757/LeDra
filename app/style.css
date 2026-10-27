@@ -1,0 +1,64 @@
+:root{
+  --paper:#f5f1ea; --card:#fffdf9; --ink:#2b2730; --muted:#7a7380; --line:#e3ddd3;
+  --acc:#c4553a; --acc2:#3d6b6a; --shadow:0 1px 2px rgba(40,30,20,.06),0 4px 16px rgba(40,30,20,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+  font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;font-size:15px;line-height:1.5}
+button,select,input{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:minmax(340px,440px) 1fr;height:100vh}
+@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.tool{height:80vh}}
+
+/* левая колонка */
+.task{overflow:auto;padding:22px 24px 40px;border-right:1px solid var(--line)}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.week{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.counter{font-size:12px;color:var(--muted)}
+.bar{height:4px;background:var(--line);border-radius:4px;margin:8px 0 18px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+h1{font-family:Georgia,"Times New Roman",serif;font-weight:normal;font-size:28px;line-height:1.15;margin:0 0 14px}
+.block{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.block b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px}
+.block p{margin:0}
+.example svg{width:100%;height:auto;display:block}
+.rule{border-left:3px solid var(--acc);padding:6px 12px;margin:14px 0;color:#5a5260;font-size:14px}
+textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;resize:vertical;font:inherit}
+.nav{display:flex;gap:8px;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:#cfc6b8}
+.btn.main{background:var(--acc);border-color:var(--acc);color:#fff;flex:1}
+.btn.main:hover{filter:brightness(1.05)}
+.btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+details{margin-top:22px}
+summary{cursor:pointer;color:var(--muted);font-size:14px}
+.weeks{margin-top:8px;font-size:14px}
+.weeks div{margin:8px 0 2px;font-weight:600}
+.weeks a{display:block;color:var(--ink);text-decoration:none;padding:2px 6px;border-radius:5px}
+.weeks a:hover{background:var(--line)}
+.weeks a.cur{background:var(--ink);color:#fff}
+.weeks a.done{color:var(--muted)}
+.small{font-size:13px;color:var(--muted)}
+
+/* правая колонка */
+.tool{display:flex;flex-direction:column;min-height:0;min-width:0}
+.tabs{display:flex;gap:4px;padding:10px 12px 0;border-bottom:1px solid var(--line)}
+.tab{border:1px solid transparent;border-bottom:none;background:none;padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--muted)}
+.tab.on{background:var(--card);border-color:var(--line);color:var(--ink);margin-bottom:-1px}
+.controls{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:14px}
+.controls label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.controls input[type=range]{width:110px;accent-color:var(--acc)}
+.controls select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:#fff}
+.sep{width:1px;height:22px;background:var(--line)}
+.stage{position:relative;flex:1;min-height:0;background:#cac3b9;overflow:hidden}
+.stage canvas{display:block}
+#view3d,#viewRefs{position:absolute;inset:0}
+#viewRefs{display:flex;align-items:center;justify-content:center;background:#2f2b33}
+#refImg,#refCanvas{max-width:100%;max-height:100%;object-fit:contain}
+.cover{position:absolute;inset:0;background:var(--paper);display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;z-index:5;text-align:center;padding:20px}
+.cover.show{display:flex}
+.cover big{font-family:Georgia,serif;font-size:26px}
+.timer{position:absolute;right:12px;top:12px;background:rgba(43,39,48,.82);color:#fff;border-radius:20px;padding:4px 12px;font-variant-numeric:tabular-nums;z-index:6;display:none}
+.empty{color:#e8e2ea;max-width:420px;text-align:center;padding:20px}
+.empty b{color:#fff}
+.drop{outline:3px dashed var(--acc);outline-offset:-12px}
+.hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:#5a5260;background:rgba(255,253,249,.8);padding:3px 8px;border-radius:6px;z-index:4}
