@@ -8,92 +8,129 @@
 </head>
 <body>
 <div class="app">
-  <section class="task">
-    <div class="top"><span class="week" id="weekName"></span><span class="counter" id="counter"></span></div>
-    <div class="bar"><i id="bar"></i></div>
-    <h1 id="title"></h1>
 
-    <div class="block"><b>Разминка, 5 минут</b><p id="warm"></p></div>
-    <div class="block"><b id="mainLabel">Задание</b><p id="main"></p></div>
-    <div class="block example" id="example"></div>
+  <section class="sheet task" id="taskSheet">
+    <header class="task-head">
+      <div class="meta"><span id="weekNo"></span><span id="counter"></span></div>
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+      <p class="week-title" id="weekTitle"></p>
+      <h1 id="title"></h1>
+    </header>
 
-    <div class="rule">Не накладывай реф на рисунок. Сравни глазами и найди одну вещь, которую поняла. Отличаться от оригинала можно.</div>
-
-    <div class="block"><b>Что поняла сегодня</b><textarea id="note" placeholder="Одна-две строчки. Пригодится, когда будем разбирать рисунки."></textarea></div>
+    <dl class="spec">
+      <div class="row"><dt>Разминка<span>5 мин</span></dt><dd id="warm"></dd></div>
+      <div class="row"><dt>Задание<span id="mainDur">15 мин</span></dt><dd id="main"></dd></div>
+      <div class="row figure" id="exampleRow"><dt>Схема</dt><dd id="example"></dd></div>
+      <div class="row"><dt><label for="note">Наблюдения</label></dt><dd><textarea id="note" rows="3"></textarea></dd></div>
+    </dl>
 
     <div class="nav">
-      <button class="btn" id="prev" title="Предыдущий день">←</button>
-      <button class="btn main" id="done">Сделала, дальше</button>
+      <button class="btn ghost" id="prev" aria-label="Предыдущее занятие">Назад</button>
+      <button class="btn primary" id="done">Задание выполнено</button>
     </div>
-    <p class="small">Рисунки сохраняй в папку «Мои рисунки», потом покажешь их мне.</p>
+    <div class="nav secondary">
+      <button class="link" id="openPlan">План программы</button>
+      <button class="link" id="copyNotes">Копировать наблюдения</button>
+    </div>
 
-    <details>
-      <summary>Весь план и мои заметки</summary>
+    <div class="drawer" id="drawer" hidden>
+      <div class="drawer-head">
+        <h2>План программы</h2>
+        <button class="link" id="closePlan">Закрыть</button>
+      </div>
       <div class="weeks" id="weeks"></div>
-      <p><button class="btn" id="copyNotes">Скопировать все заметки</button></p>
-    </details>
+    </div>
   </section>
 
-  <section class="tool">
-    <div class="tabs">
-      <button class="tab" data-tab="shapes">Формы</button>
-      <button class="tab" data-tab="mannequin">Манекен</button>
-      <button class="tab" data-tab="refs">Мои рефы</button>
-    </div>
-
-    <div class="controls" id="ctl3d">
-      <button class="btn" id="newScene">Новая сцена</button>
-      <span id="poseBtns" style="display:none;gap:6px">
-        <button class="btn" data-kind="any">Любая поза</button>
-        <button class="btn" data-kind="stand">Стоит</button>
-        <button class="btn" data-kind="sit">Сидит</button>
-        <button class="btn" data-kind="action">В движении</button>
-      </span>
-      <label>Ракурс
-        <select id="angle"><option value="rand">случайный</option><option value="eye">на уровне глаз</option><option value="low">снизу</option><option value="high">сверху</option></select>
-      </label>
-      <span class="sep"></span>
-      <label><input type="checkbox" id="wide"> широкий объектив</label>
-      <label><input type="checkbox" id="toon"> 3 тона</label>
-      <span class="sep"></span>
-      <label>Лампа вокруг <input type="range" id="lampAz" min="0" max="360" value="45"></label>
-      <label>высота <input type="range" id="lampEl" min="-30" max="85" value="50"></label>
-    </div>
-
-    <div class="controls" id="ctlRefs" style="display:none">
-      <button class="btn" id="nextRef">Следующее фото</button>
-      <label><input type="checkbox" id="mirror"> зеркально</label>
-      <label><input type="checkbox" id="gray"> ч/б</label>
-      <label><input type="checkbox" id="tones"> 3 тона</label>
-      <span class="sep"></span>
-      <label class="btn" style="color:inherit">Добавить фото<input type="file" id="addFiles" accept="image/*" multiple hidden></label>
-    </div>
-
-    <div class="controls">
-      <label>Таймер
-        <select id="timerSel"><option value="0">выкл</option><option value="30">30 сек</option><option value="60">1 мин</option><option value="120">2 мин</option><option value="300">5 мин</option><option value="600">10 мин</option></select>
-      </label>
-      <button class="btn" id="hideBtn">Спрятать реф</button>
-      <span class="small" id="refInfo"></span>
+  <section class="sheet tool">
+    <div class="tool-head">
+      <div class="seg tabs" role="tablist">
+        <button class="tab" data-tab="shapes">Формы</button>
+        <button class="tab" data-tab="mannequin">Манекен</button>
+        <button class="tab" data-tab="refs">Референсы</button>
+      </div>
+      <div class="timer" id="timer" hidden></div>
     </div>
 
     <div class="stage" id="stage">
       <div id="view3d"></div>
-      <div id="viewRefs" style="display:none">
+      <div id="viewRefs" hidden>
         <img id="refImg" alt="">
-        <svg width="0" height="0" style="position:absolute"><filter id="threeTones" color-interpolation-filters="sRGB">
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="threeTones" color-interpolation-filters="sRGB">
           <feGaussianBlur stdDeviation="1.2"/>
           <feColorMatrix type="matrix" values="0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0 0 0 1 0"/>
           <feComponentTransfer><feFuncR type="discrete" tableValues="0.23 0.6 0.91"/><feFuncG type="discrete" tableValues="0.23 0.6 0.91"/><feFuncB type="discrete" tableValues="0.23 0.6 0.91"/></feComponentTransfer>
         </filter></svg>
         <div class="empty" id="refEmpty">
-          <p><b>Здесь будут твои фото.</b></p>
-          <p>Положи картинки в папку «Мои рефы» рядом с программой и открой её через ярлык «Открыть рисование». Или перетащи фото прямо сюда, но тогда они пропадут после закрытия.</p>
+          <p class="empty-title">Референсов пока нет</p>
+          <p>Добавьте изображения в папку «Референсы» рядом с программой и откройте её через ярлык «Рисование». Изображения, перетащенные в это окно, доступны до закрытия программы.</p>
+          <label class="btn primary">Выбрать изображения<input type="file" class="addFiles" accept="image/*" multiple hidden></label>
         </div>
       </div>
-      <div class="cover" id="cover"><big>Реф спрятан</big><span>Рисуй по памяти. Нажми «Показать», когда закончишь.</span></div>
-      <div class="timer" id="timer"></div>
-      <div class="hint" id="hint3d">Крути мышкой, колесо приближает</div>
+      <div class="cover" id="cover"><p>Референс скрыт</p></div>
+
+      <span class="caption tl" id="capView"></span>
+      <span class="caption bl" id="capInfo"></span>
+
+      <aside class="panel" id="panel">
+        <button class="panel-head" id="panelToggle" aria-expanded="true">Параметры</button>
+        <div class="panel-body">
+
+          <div class="grp only-shapes"><button class="btn primary wide" id="newScene">Новая сцена</button></div>
+
+          <div class="grp only-mannequin">
+            <span class="lbl">Поза</span>
+            <div class="seg" id="poseBtns">
+              <button data-kind="any" class="on">Любая</button>
+              <button data-kind="stand">Стоя</button>
+              <button data-kind="sit">Сидя</button>
+              <button data-kind="action">Движение</button>
+            </div>
+          </div>
+
+          <div class="grp only-3d">
+            <span class="lbl">Ракурс</span>
+            <div class="seg" id="angleSeg">
+              <button data-v="rand" class="on">Любой</button>
+              <button data-v="eye">Прямо</button>
+              <button data-v="low">Снизу</button>
+              <button data-v="high">Сверху</button>
+            </div>
+          </div>
+
+          <div class="grp only-3d">
+            <label class="sw"><span>Широкий объектив</span><input type="checkbox" id="wide"><i></i></label>
+            <label class="sw"><span>Три тона</span><input type="checkbox" id="toon"><i></i></label>
+          </div>
+
+          <div class="grp only-3d">
+            <span class="lbl">Свет</span>
+            <label class="rng"><span>Направление</span><input type="range" id="lampAz" min="0" max="360" value="45"></label>
+            <label class="rng"><span>Высота</span><input type="range" id="lampEl" min="-30" max="85" value="50"></label>
+          </div>
+
+          <div class="grp only-refs"><button class="btn primary wide" id="nextRef">Следующее изображение</button></div>
+          <div class="grp only-refs">
+            <label class="sw"><span>Зеркально</span><input type="checkbox" id="mirror"><i></i></label>
+            <label class="sw"><span>Чёрно-белое</span><input type="checkbox" id="gray"><i></i></label>
+            <label class="sw"><span>Три тона</span><input type="checkbox" id="tones"><i></i></label>
+            <label class="link file">Добавить изображения<input type="file" class="addFiles" accept="image/*" multiple hidden></label>
+          </div>
+
+          <div class="grp">
+            <span class="lbl">Таймер</span>
+            <div class="seg" id="timerSeg">
+              <button data-v="0" class="on">Выкл</button>
+              <button data-v="30">30 с</button>
+              <button data-v="60">1 мин</button>
+              <button data-v="120">2 мин</button>
+              <button data-v="300">5 мин</button>
+            </div>
+          </div>
+
+          <div class="grp"><button class="btn ghost wide" id="hideBtn">Скрыть референс</button></div>
+        </div>
+      </aside>
     </div>
   </section>
 </div>

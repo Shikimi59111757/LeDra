@@ -1,12 +1,12 @@
 ﻿param([switch]$Manual)
-# Обновляет список фото из папки «Мои рефы» и открывает программу.
+# Обновляет список изображений из папки «Референсы» и открывает программу.
 $ErrorActionPreference = 'SilentlyContinue'
 $app  = $PSScriptRoot
 $root = Split-Path -Parent $app
 
 if (-not $Manual -and (Get-Date).DayOfWeek -eq 'Sunday') { exit }
 
-$refsDir = Join-Path $root 'Мои рефы'
+$refsDir = Join-Path $root 'Референсы'
 if (-not (Test-Path $refsDir)) { New-Item -ItemType Directory -Path $refsDir | Out-Null }
 $ext = @('.jpg','.jpeg','.png','.webp','.gif','.bmp')
 $items = @(Get-ChildItem -Path $refsDir -Recurse -File | Where-Object { $ext -contains $_.Extension.ToLower() })

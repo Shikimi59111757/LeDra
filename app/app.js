@@ -17,21 +17,29 @@ let dayIdx = Math.min(Math.max(store.get('day', 0), 0), DAYS.length - 1);
 
 function renderDay(){
   const { w, wi, di, d } = DAYS[dayIdx];
-  $('weekName').textContent = `Неделя ${wi+1}. ${w.title}`;
-  $('counter').textContent = `день ${dayIdx+1} из ${DAYS.length}`;
-  $('bar').style.width = (dayIdx / (DAYS.length-1) * 100) + '%';
+  $('weekNo').textContent = `Неделя ${wi+1} из ${PLAN.length}`;
+  $('counter').textContent = `Занятие ${dayIdx+1} из ${DAYS.length}`;
+  const ticks = $('ticks'); ticks.innerHTML = '';
+  let n = 0;
+  PLAN.forEach(wk => {
+    const g = document.createElement('div'); g.className = 'wk';
+    wk.days.forEach(() => { const i = document.createElement('i'); if (n < dayIdx) i.className = 'done'; else if (n === dayIdx) i.className = 'cur'; g.appendChild(i); n++; });
+    ticks.appendChild(g);
+  });
+  $('weekTitle').textContent = w.title;
   $('title').textContent = d.t;
   $('warm').textContent = w.warm;
   $('main').textContent = d.m;
-  $('mainLabel').textContent = di === 5 ? 'Задание на час' : 'Задание, 15 минут';
-  $('example').innerHTML = (window.EXAMPLES || {})[d.ex] || '';
-  $('example').style.display = $('example').innerHTML ? '' : 'none';
+  $('mainDur').textContent = di === 5 ? '60 мин' : '15 мин';
+  const ex = (window.EXAMPLES || {})[d.ex] || '';
+  $('example').innerHTML = ex;
+  $('exampleRow').style.display = ex ? '' : 'none';
   $('note').value = store.get('note.'+dayIdx, '');
   $('prev').disabled = dayIdx === 0;
-  $('done').textContent = dayIdx === DAYS.length-1 ? 'Программа пройдена' : 'Сделала, дальше';
+  $('done').textContent = dayIdx === DAYS.length-1 ? 'Программа завершена' : 'Задание выполнено';
   if (d.tool && d.tool !== 'none') setTab(d.tool);
   renderWeeks();
-  document.querySelector('.task').scrollTop = 0;
+  $('taskSheet').scrollTop = 0;
 }
 function goDay(i){ dayIdx = Math.min(Math.max(i,0), DAYS.length-1); store.set('day', dayIdx); renderDay(); }
 $('done').onclick = () => { if (dayIdx < DAYS.length-1) goDay(dayIdx+1); };
@@ -41,55 +49,77 @@ $('note').oninput = e => store.set('note.'+dayIdx, e.target.value);
 function renderWeeks(){
   const box = $('weeks'); box.innerHTML = '';
   let i = 0;
+  const curWeek = DAYS[dayIdx].wi;
   PLAN.forEach((w, wi) => {
-    const h = document.createElement('div'); h.textContent = `${wi+1}. ${w.title}`; box.appendChild(h);
-    w.days.forEach(d => {
-      const a = document.createElement('a'); const n = i;
-      a.href = '#'; a.textContent = d.t;
-      if (n === dayIdx) a.className = 'cur'; else if (n < dayIdx) a.className = 'done';
-      a.onclick = ev => { ev.preventDefault(); goDay(n); };
-      box.appendChild(a); i++;
+    const det = document.createElement('details'); if (wi === curWeek) det.open = true;
+    const sum = document.createElement('summary');
+    sum.innerHTML = `<span class="n">${String(wi+1).padStart(2,'0')}</span><span class="wt"></span><span class="cnt">${w.days.length}</span>`;
+    sum.querySelector('.wt').textContent = w.title;
+    det.appendChild(sum);
+    const ol = document.createElement('ol');
+    w.days.forEach((d, di) => {
+      const li = document.createElement('li'), b = document.createElement('button'), num = i;
+      b.innerHTML = `<span class="d">${di+1}</span><span></span>`; b.lastChild.textContent = d.t;
+      if (num === dayIdx) b.className = 'cur'; else if (num < dayIdx) b.className = 'done';
+      b.onclick = () => { goDay(num); $('drawer').hidden = true; };
+      li.appendChild(b); ol.appendChild(li); i++;
     });
+    det.appendChild(ol); box.appendChild(det);
   });
 }
+$('openPlan').onclick = () => { $('drawer').hidden = false; };
+$('closePlan').onclick = () => { $('drawer').hidden = true; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').hidden = true; });
 $('copyNotes').onclick = () => {
   const lines = [];
-  DAYS.forEach((x, i) => { const n = store.get('note.'+i, ''); if (n.trim()) lines.push(`Неделя ${x.wi+1}, «${x.d.t}»: ${n.trim()}`); });
-  const text = lines.join('\n') || 'Заметок пока нет';
+  DAYS.forEach((x, i) => { const n = store.get('note.'+i, ''); if (n.trim()) lines.push(`Неделя ${x.wi+1}, «${x.d.t}». ${n.trim()}`); });
+  const text = lines.join('\n') || 'Наблюдений пока нет';
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
-    () => { $('copyNotes').textContent = 'Скопировано'; setTimeout(()=>$('copyNotes').textContent='Скопировать все заметки', 1500); },
-    () => prompt('Скопируй текст:', text));
+    () => { $('copyNotes').textContent = 'Наблюдения скопированы'; setTimeout(()=>$('copyNotes').textContent='Копировать наблюдения', 1600); },
+    () => prompt('Скопируйте текст:', text));
 };
 
 /* ---------- вкладки ---------- */
 let tab = 'mannequin';
+const VIEW_NAMES = { shapes: 'Формы', mannequin: 'Манекен', refs: 'Референсы' };
 function setTab(t){
   tab = t;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   const is3d = t !== 'refs';
+  const tool = document.querySelector('.tool');
+  tool.classList.remove('mode-shapes','mode-mannequin','mode-refs'); tool.classList.add('mode-'+t);
   $('view3d').style.display = is3d ? '' : 'none';
-  $('viewRefs').style.display = is3d ? 'none' : 'flex';
-  $('ctl3d').style.display = is3d ? '' : 'none';
-  $('ctlRefs').style.display = is3d ? 'none' : '';
-  $('hint3d').style.display = is3d ? '' : 'none';
-  $('poseBtns').style.display = t === 'mannequin' ? 'inline-flex' : 'none';
-  $('newScene').style.display = t === 'shapes' ? '' : 'none';
-  $('hideBtn').textContent = 'Спрятать реф'; $('cover').classList.remove('show');
+  $('viewRefs').hidden = is3d;
+  showCover(false);
   if (is3d){ three.mode(t); } else { showRef(refIdx < 0 ? randomRefIndex() : refIdx); }
+  updateCaptions();
   restartTimer();
 }
+function updateCaptions(){
+  if (tab === 'refs'){
+    $('capView').textContent = refIdx >= 0 ? refs[refIdx].name.replace(/^.*\//,'') : '';
+    $('capInfo').textContent = refIdx >= 0 ? `Изображение ${refIdx+1} из ${refs.length}` : '';
+  } else {
+    const a = { rand:'произвольный ракурс', eye:'ракурс на уровне глаз', low:'ракурс снизу', high:'ракурс сверху' }[angle];
+    $('capView').textContent = `${VIEW_NAMES[tab]}, ${a}${$('wide').checked ? ', широкий объектив' : ''}`;
+    $('capInfo').textContent = `Свет ${$('lampAz').value}° / ${$('lampEl').value}°`;
+  }
+}
+let angle = 'rand';
+function segPick(segId, btn){ document.querySelectorAll('#'+segId+' button').forEach(b => b.classList.toggle('on', b === btn)); }
+$('panelToggle').onclick = () => { const p = $('panel'); p.classList.toggle('closed'); $('panelToggle').setAttribute('aria-expanded', !p.classList.contains('closed')); three.resize(); };
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 
 /* ---------- таймер ---------- */
 let tLeft = 0, tHandle = null;
 function restartTimer(){
   clearInterval(tHandle);
-  const sec = +$('timerSel').value;
-  if (!sec){ $('timer').style.display = 'none'; return; }
+  const sec = timerSec;
+  if (!sec){ $('timer').hidden = true; return; }
   tLeft = sec; tick();
   tHandle = setInterval(() => { tLeft--; if (tLeft <= 0){ beep(); nextThing(); tLeft = sec; } tick(); }, 1000);
 }
-function tick(){ $('timer').style.display = ''; const m = Math.floor(tLeft/60), s = tLeft%60; $('timer').textContent = m + ':' + String(s).padStart(2,'0'); }
+function tick(){ $('timer').hidden = false; const m = Math.floor(tLeft/60), s = tLeft%60; $('timer').textContent = m + ':' + String(s).padStart(2,'0'); }
 function nextThing(){
   if (tab === 'refs') showRef(randomRefIndex());
   else if (tab === 'shapes') three.newShapes();
@@ -104,15 +134,17 @@ function beep(){
     o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + .26);
   }catch(e){}
 }
-$('timerSel').onchange = restartTimer;
-$('hideBtn').onclick = () => {
-  const c = $('cover'); c.classList.toggle('show');
-  $('hideBtn').textContent = c.classList.contains('show') ? 'Показать' : 'Спрятать реф';
-  $('hideBtn').classList.toggle('on', c.classList.contains('show'));
-};
+let timerSec = 0;
+document.querySelectorAll('#timerSeg button').forEach(b => b.onclick = () => { segPick('timerSeg', b); timerSec = +b.dataset.v; restartTimer(); });
+function showCover(on){
+  $('cover').classList.toggle('show', on);
+  $('hideBtn').textContent = on ? 'Показать референс' : 'Скрыть референс';
+  $('hideBtn').classList.toggle('on', on);
+}
+$('hideBtn').onclick = () => showCover(!$('cover').classList.contains('show'));
 
 /* ---------- мои рефы ---------- */
-const refs = (window.REFS || []).map(p => ({ src: 'Мои рефы/' + p.split('/').map(encodeURIComponent).join('/'), name: p }));
+const refs = (window.REFS || []).map(p => ({ src: 'Референсы/' + p.split('/').map(encodeURIComponent).join('/'), name: p }));
 let refIdx = -1, recent = [];
 function randomRefIndex(){
   if (!refs.length) return -1;
@@ -125,12 +157,12 @@ function randomRefIndex(){
 function showRef(i){
   refIdx = i;
   const img = $('refImg');
-  if (i < 0){ $('refEmpty').style.display=''; img.style.display='none'; $('refInfo').textContent=''; return; }
-  $('refEmpty').style.display = 'none';
-  $('refInfo').textContent = `фото ${i+1} из ${refs.length}`;
+  if (i < 0){ $('refEmpty').style.display=''; img.style.display='none'; updateCaptions(); return; }
+  $('refEmpty').style.display = 'none'; img.style.display = '';
   img.onload = applyFilters;
-  img.onerror = () => { $('refInfo').textContent = 'не получилось открыть ' + refs[i].name; };
+  img.onerror = () => { $('capInfo').textContent = 'Не удалось открыть файл ' + refs[i].name; };
   img.src = refs[i].src;
+  updateCaptions();
 }
 function applyFilters(){
   // фильтры через CSS и SVG: так работают и с файлами с диска
@@ -144,7 +176,7 @@ function addFiles(files){
   [...files].filter(f => f.type.startsWith('image/')).forEach(f => refs.push({ src: URL.createObjectURL(f), name: f.name }));
   showRef(refs.length - 1);
 }
-$('addFiles').onchange = e => addFiles(e.target.files);
+document.querySelectorAll('.addFiles').forEach(inp => inp.onchange = e => { setTab('refs'); addFiles(e.target.files); e.target.value = ''; });
 const stage = $('stage');
 stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('drop'); });
 stage.addEventListener('dragleave', () => stage.classList.remove('drop'));
@@ -156,46 +188,101 @@ const three = (function(){
   const T = window.THREE;
   if (!T){ return { mode(){}, newShapes(){}, newPose(){} }; }
   const host = $('view3d');
-  const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // без встроенного сглаживания: в обычном режиме картинка рисуется с запасом по размеру,
+  // в режиме «3 тона» пиксель в пиксель, чтобы на краях не появлялись промежуточные цвета
+  const renderer = new T.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+  const smoothRatio = () => Math.min(Math.max(window.devicePixelRatio * 2, 2), 3);
+  renderer.setPixelRatio(smoothRatio());
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.outputEncoding = T.sRGBEncoding;
   host.appendChild(renderer.domElement);
 
   const scene = new T.Scene();
-  scene.background = new T.Color(0xcac3b9);
+  scene.background = new T.Color(0xded4c3);
   const camera = new T.PerspectiveCamera(35, 1, 0.1, 200);
   const controls = new T.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.1;
 
-  const hemi = new T.HemisphereLight(0xfff8ef, 0x6f675f, 0.28); scene.add(hemi);
-  const sun = new T.DirectionalLight(0xffffff, 1.0);
+  const hemi = new T.HemisphereLight(0xfff4e2, 0x6b5a47, 0.3); scene.add(hemi);
+  const sun = new T.DirectionalLight(0xfff1dc, 0.82);
   sun.castShadow = true; sun.shadow.mapSize.set(2048,2048);
   const sc = sun.shadow.camera; sc.left = sc.bottom = -8; sc.right = sc.top = 8; sc.near = 0.5; sc.far = 60;
-  sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
+  sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.05;
   scene.add(sun); scene.add(sun.target);
-  const lampDot = new T.Mesh(new T.SphereGeometry(0.18, 16, 12), new T.MeshBasicMaterial({ color: 0xf2c94c }));
+  const lampDot = new T.Mesh(new T.SphereGeometry(0.18, 16, 12), new T.MeshBasicMaterial({ color: 0xd9a441 }));
   scene.add(lampDot);
 
-  const floor = new T.Mesh(new T.PlaneGeometry(80, 80), new T.MeshStandardMaterial({ color: 0xa79f95, roughness: 1 }));
+  const floor = new T.Mesh(new T.PlaneGeometry(80, 80), new T.MeshStandardMaterial({ color: 0xb9a98f, roughness: 1 }));
   floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
   // материалы: обычный и «3 тона»
-  const grad = new T.DataTexture(new Uint8Array([55, 135, 215]), 3, 1, T.RedFormat);
-  grad.minFilter = grad.magFilter = T.NearestFilter; grad.needsUpdate = true;
-  const matStd = new T.MeshStandardMaterial({ color: 0xcfc7bc, roughness: 0.8 });
-  const matToon = new T.MeshToonMaterial({ color: 0xd8d0c5, gradientMap: grad });
-  const matStdAcc = new T.MeshStandardMaterial({ color: 0xc98f7c, roughness: 0.7 });
-  const matToonAcc = new T.MeshToonMaterial({ color: 0xc98f7c, gradientMap: grad });
+  const matStd = new T.MeshStandardMaterial({ color: 0xd9cdb9, roughness: 0.8 });
+  const matStdAcc = new T.MeshStandardMaterial({ color: 0xa8573a, roughness: 0.7 });
+  const floorStd = floor.material;
+
+  // «3 тона»: свой шейдер, на выходе ровно три цвета без полутонов
+  const TONES = { light: 0xE9E1D3, mid: 0x9C8F7E, dark: 0x3E342D };
+  const lin = hex => new T.Color(hex).convertSRGBToLinear();
+  function makeTones(isFloor){
+    return new T.ShaderMaterial({
+      lights: true,
+      uniforms: T.UniformsUtils.merge([T.UniformsLib.lights, {
+        uLight: { value: lin(TONES.light) }, uMid: { value: lin(TONES.mid) }, uDark: { value: lin(TONES.dark) },
+        uDir: { value: new T.Vector3(0, 1, 0) }, uFloor: { value: isFloor ? 1 : 0 }
+      }]),
+      vertexShader: `
+        #include <common>
+        #include <shadowmap_pars_vertex>
+        varying vec3 vN;
+        void main(){
+          #include <beginnormal_vertex>
+          #include <defaultnormal_vertex>
+          #include <begin_vertex>
+          #include <project_vertex>
+          #include <worldpos_vertex>
+          #include <shadowmap_vertex>
+          vN = normalize(mat3(modelMatrix) * objectNormal);
+        }`,
+      fragmentShader: `
+        uniform vec3 uLight, uMid, uDark, uDir; uniform float uFloor;
+        varying vec3 vN;
+        #include <common>
+        #include <packing>
+        #include <lights_pars_begin>
+        #include <shadowmap_pars_fragment>
+        #include <shadowmask_pars_fragment>
+        void main(){
+          float ndl = dot(normalize(vN), normalize(uDir));
+          bool shadowed = getShadowMask() < 0.5;
+          vec3 c;
+          if (uFloor > 0.5) c = shadowed ? uDark : uMid;
+          else if (ndl <= 0.0 || shadowed) c = uDark;
+          else if (ndl < 0.45) c = uMid;
+          else c = uLight;
+          gl_FragColor = vec4(c, 1.0);
+          #include <encodings_fragment>
+        }`
+    });
+  }
+  const matTones = makeTones(false), floorTones = makeTones(true);
+  const bgStd = scene.background.clone(), bgTones = new T.Color(TONES.mid);
   let toon = false;
-  const M = () => toon ? matToon : matStd;
-  const MA = () => toon ? matToonAcc : matStdAcc;
+  const M = () => toon ? matTones : matStd;
+  const MA = () => toon ? matTones : matStdAcc;
 
   let content = new T.Group(); scene.add(content);
   let curMode = 'mannequin';
 
   function mesh(geo, acc){ const m = new T.Mesh(geo, acc ? MA() : M()); m.castShadow = m.receiveShadow = true; m.userData.acc = !!acc; return m; }
-  function refreshMaterials(){ scene.traverse(o => { if (o.isMesh && o !== floor && o !== lampDot) o.material = o.userData.acc ? MA() : M(); }); }
+  function refreshMaterials(){
+    scene.traverse(o => { if (o.isMesh && o !== floor && o !== lampDot) o.material = o.userData.acc ? MA() : M(); });
+    floor.material = toon ? floorTones : floorStd;
+    scene.background = toon ? bgTones : bgStd;
+    lampDot.visible = !toon;
+    renderer.setPixelRatio(toon ? window.devicePixelRatio : smoothRatio());
+    renderer.domElement.style.imageRendering = toon ? 'pixelated' : '';
+    resize();
+  }
 
   /* --- формы --- */
   function newShapes(){
@@ -274,7 +361,7 @@ const three = (function(){
       { chair:true, spine:[-12,10,0], chest:[-6,10,0], neck:[8,-25,0], shL:[10,0,20], shR:[-40,0,-30], elL:[-20,0,0], elR:[-120,0,0], hpL:[-95,0,4], hpR:[-80,20,-20], knL:[60,0,0], knR:[120,0,0] },
       { spine:[25,0,0], chest:[15,0,0], neck:[-10,0,0], shL:[-50,0,25], shR:[-50,0,-25], elL:[-40,0,0], elR:[-40,0,0], hpL:[-70,0,30], hpR:[-70,0,-30], knL:[130,0,0], knR:[130,0,0] },
       { spine:[30,0,0], chest:[20,0,0], neck:[20,0,0], shL:[-40,0,10], shR:[-40,0,-10], elL:[-40,0,0], elR:[-40,0,0], hpL:[-125,0,8], hpR:[-125,0,-8], knL:[145,0,0], knR:[145,0,0], anL:[-30,0,0], anR:[-30,0,0] },
-      { spine:[-25,0,0], chest:[-5,0,0], neck:[20,0,0], shL:[30,0,30], shR:[30,0,-30], elL:[-10,0,0], elR:[-10,0,0], hpL:[-85,0,10], hpR:[-40,0,-12], knL:[5,0,0], knR:[95,0,0] }
+      { spine:[-25,0,0], chest:[-5,0,0], neck:[20,0,0], shL:[35,0,25], shR:[35,0,-25], elL:[-5,0,0], elR:[-5,0,0], hpL:[-88,0,10], hpR:[-110,0,-10], knL:[5,0,0], knR:[100,0,0] }
     ],
     action: [
       { spine:[15,0,0], chest:[5,15,0], neck:[-10,-10,0], shL:[45,0,10], shR:[-60,0,-10], elL:[-40,0,0], elR:[-80,0,0], hpL:[-50,0,4], hpR:[25,0,-4], knL:[40,0,0], knR:[60,0,0] },
@@ -332,16 +419,16 @@ const three = (function(){
     const c = sphere.center, r = Math.max(sphere.radius, 1);
     const wide = $('wide').checked;
     camera.fov = wide ? 80 : 35; camera.updateProjectionMatrix();
-    const dist = r / Math.sin(camera.fov*deg/2) * (wide ? 0.6 : 0.82);
+    const dist = r / Math.sin(camera.fov*deg/2) * (wide ? 0.7 : 0.95);
     let az = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
     let el = 15*deg;
     if (randomize){
       az = R(0, Math.PI*2);
-      const a = $('angle').value;
+      const a = angle;
       el = (a === 'low' ? R(-28, -12) : a === 'high' ? R(35, 65) : a === 'eye' ? R(0, 10) : R(-25, 55)) * deg;
     }
     const target = c.clone();
-    if ($('angle').value === 'low' && randomize) target.y = Math.max(target.y, 0.3);
+    if (angle === 'low' && randomize) target.y = Math.max(target.y, 0.3);
     controls.target.copy(target);
     const camY = Math.max(target.y + Math.sin(el)*dist, 0.25);
     camera.position.set(target.x + Math.sin(az)*Math.cos(el)*dist, camY, target.z + Math.cos(az)*Math.cos(el)*dist);
@@ -355,20 +442,25 @@ const three = (function(){
     sun.position.set(c.x + Math.sin(az)*Math.cos(el)*d, c.y + Math.sin(el)*d, c.z + Math.cos(az)*Math.cos(el)*d);
     sun.target.position.copy(c);
     lampDot.position.copy(sun.position).sub(c).setLength(r*1.25).add(c);
+    const dir = sun.position.clone().sub(sun.target.position).normalize();
+    matTones.uniforms.uDir.value.copy(dir); floorTones.uniforms.uDir.value.copy(dir);
     // свет снизу: пол не должен его загораживать
     floor.visible = el > 0;
   }
-  ['lampAz','lampEl'].forEach(id => $(id).oninput = () => placeLamp());
-  $('wide').onchange = () => frame(false);
-  $('angle').onchange = () => frame(true);
-  $('toon').onchange = e => { toon = e.target.checked; hemi.intensity = toon ? 0.12 : 0.28; refreshMaterials(); };
+  ['lampAz','lampEl'].forEach(id => $(id).oninput = () => { placeLamp(); updateCaptions(); });
+  $('wide').onchange = () => { frame(false); updateCaptions(); };
+  document.querySelectorAll('#angleSeg button').forEach(b => b.onclick = () => { segPick('angleSeg', b); angle = b.dataset.v; frame(true); updateCaptions(); });
+  $('toon').onchange = e => { toon = e.target.checked; refreshMaterials(); };
   $('newScene').onclick = () => { newShapes(); restartTimer(); };
-  document.querySelectorAll('#poseBtns .btn').forEach(b => b.onclick = () => { newPose(b.dataset.kind); restartTimer(); });
+  document.querySelectorAll('#poseBtns button').forEach(b => b.onclick = () => { segPick('poseBtns', b); newPose(b.dataset.kind); restartTimer(); });
 
   function resize(){
     const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return;
     renderer.setSize(w, h, false); renderer.domElement.style.width = w+'px'; renderer.domElement.style.height = h+'px';
-    camera.aspect = w/h; camera.updateProjectionMatrix();
+    camera.aspect = w/h;
+    const panel = $('panel'), shift = panel.classList.contains('closed') || w < 700 ? 0 : Math.round(panel.offsetWidth/2);
+    if (shift) camera.setViewOffset(w + 2*shift, h, 2*shift, 0, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
   }
   new ResizeObserver(resize).observe(host);
   (function loop(){ requestAnimationFrame(loop); if (host.offsetParent !== null){ controls.update(); renderer.render(scene, camera); } })();
@@ -380,7 +472,7 @@ const three = (function(){
       curMode = m;
       if (m === 'shapes') newShapes(); else newPose(lastKind);
     },
-    newShapes, newPose
+    newShapes, newPose, resize
   };
 })();
 

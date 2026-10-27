@@ -11,11 +11,18 @@ $def = [TimeZoneInfo]::ConvertTimeFromUtc($utc, [TimeZoneInfo]::Local).ToString(
 
 Write-Host ''
 Write-Host 'Напоминание о рисовании' -ForegroundColor Yellow
-Write-Host "16:00 по Гринвичу на этом компьютере это $def."
-$t = Read-Host "Во сколько напоминать? Нажми Enter, чтобы оставить $def, или впиши своё время (например 15:30)"
+Write-Host "16:00 по Гринвичу соответствует $def по времени этого компьютера."
+$t = Read-Host "Время напоминания (Enter — оставить $def, или введите другое, например 15:30)"
 if ([string]::IsNullOrWhiteSpace($t)) { $t = $def }
-try { $time = [DateTime]::ParseExact($t.Trim(), @('H:mm','HH:mm','H.mm'), $null, 'None') }
-catch { Write-Host "Не поняла время «$t», ставлю $def." -ForegroundColor Red; $time = [DateTime]::ParseExact($def, 'HH:mm', $null) }
+function Read-Time([string]$v) {
+    if ($v.Trim() -match '^(\d{1,2})\s*[:.,\-]?\s*(\d{2})$') {
+        $h = [int]$Matches[1]; $m = [int]$Matches[2]
+        if ($h -le 23 -and $m -le 59) { return [DateTime]::Today.AddHours($h).AddMinutes($m) }
+    }
+    return $null
+}
+$time = Read-Time $t
+if (-not $time) { Write-Host "Время «$t» не распознано, установлено $def." -ForegroundColor Red; $time = Read-Time $def }
 
 $arg      = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$remind`""
 $action   = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg
@@ -34,8 +41,8 @@ $lnk.IconLocation = 'imageres.dll,190'
 $lnk.Save()
 
 Write-Host ''
-Write-Host ("Готово. Программа будет открываться каждый день в " + $time.ToString('HH:mm') + ", кроме воскресенья.") -ForegroundColor Green
-Write-Host 'Если компьютер в это время выключен, она откроется, когда ты его включишь.'
-Write-Host 'На рабочем столе появился ярлык «Рисование», им можно открыть программу в любой момент.'
+Write-Host ("Напоминание установлено: ежедневно в " + $time.ToString('HH:mm') + ", кроме воскресенья.") -ForegroundColor Green
+Write-Host 'Если компьютер в это время выключен, программа откроется после включения.'
+Write-Host 'Ярлык «Рисование» на рабочем столе открывает программу в любое время.'
 Write-Host ''
 & $remind -Manual
