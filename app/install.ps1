@@ -18,7 +18,8 @@ if ($old -and $old.Triggers.Count -gt 0) {
 if (-not $Keep) {
     Write-Host ''
     Write-Host 'Напоминание о рисовании' -ForegroundColor Yellow
-    Write-Host "16:00 по Гринвичу соответствует $def по времени этого компьютера."
+    if ($old) { Write-Host "Сейчас напоминание стоит на $def." }
+    else { Write-Host "16:00 по Гринвичу соответствует $def по времени этого компьютера." }
     $t = Read-Host "Время напоминания (Enter — оставить $def, или введите другое, например 15:30)"
     if ([string]::IsNullOrWhiteSpace($t)) { $t = $def }
 } else { $t = $def }
