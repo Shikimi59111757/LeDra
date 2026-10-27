@@ -110,6 +110,20 @@ textarea:focus{background:#fbf8f2}
 .weeks li button:hover{background:var(--sheet-2)}
 .weeks li button.done{color:var(--muted)}
 .weeks li button.cur{background:var(--ink);color:var(--sheet)}
+.tool.mode-links .panel{display:none}
+#viewLinks{position:absolute;inset:0;overflow:auto;background:var(--sheet);background-image:var(--noise)}
+#viewLinks[hidden]{display:none}
+.links-wrap{max-width:640px;margin:0 auto;padding:40px 32px}
+.links-wrap h2{margin:0 0 14px;padding-bottom:12px;font:300 40px/1 var(--serif);border-bottom:1px solid var(--ink)}
+.links{list-style:none;margin:0;padding:0}
+.links li{border-bottom:1px solid var(--rule)}
+.links a{display:grid;grid-template-columns:1fr auto;column-gap:12px;padding:13px 8px;margin:0 -8px;border-radius:6px;color:inherit;text-decoration:none}
+.links a:hover{background:var(--sheet-2)}
+.links .lt{font:400 22px/1.15 var(--serif)}
+.links .ln{grid-column:1;color:var(--muted);font-size:14px;margin-top:3px}
+.links .lh{grid-column:2;grid-row:1;align-self:baseline;font:400 11.5px var(--mono);color:var(--muted)}
+.links a:hover .lt{color:var(--rowan)}
+.links-note{color:var(--muted);font-size:13px;margin-top:16px}
 .weeks li .d{font:400 12px/1.7 var(--mono);opacity:.7;min-width:20px}
 
 /* ---------- правая колонка ---------- */

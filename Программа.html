@@ -40,6 +40,7 @@
       </div>
       <div class="weeks" id="weeks"></div>
     </div>
+
   </section>
 
   <section class="sheet tool">
@@ -48,6 +49,7 @@
         <button class="tab" data-tab="shapes">Формы</button>
         <button class="tab" data-tab="mannequin">Манекен</button>
         <button class="tab" data-tab="refs">Референсы</button>
+        <button class="tab" data-tab="links">Ссылки</button>
       </div>
       <div class="timer" id="timer" hidden></div>
     </div>
@@ -63,8 +65,14 @@
         </filter></svg>
         <div class="empty" id="refEmpty">
           <p class="empty-title">Референсов пока нет</p>
-          <p>Добавьте изображения в папку «Референсы» рядом с программой и откройте её через ярлык «Рисование». Изображения, перетащенные в это окно, доступны до закрытия программы.</p>
+          <p>Добавьте изображения в папку «Референсы»</p>
           <label class="btn primary">Выбрать изображения<input type="file" class="addFiles" accept="image/*" multiple hidden></label>
+        </div>
+      </div>
+      <div id="viewLinks" hidden>
+        <div class="links-wrap">
+          <h2>Полезные ссылки</h2>
+          <ul class="links" id="links"></ul>
         </div>
       </div>
       <div class="cover" id="cover"><p>Референс скрыт</p></div>
@@ -144,6 +152,7 @@
 <script src="app/plan.js" charset="utf-8"></script>
 <script src="app/examples.js" charset="utf-8"></script>
 <script src="app/refs.js" charset="utf-8"></script>
+<script src="app/links.js" charset="utf-8"></script>
 <script src="app/app.js" charset="utf-8"></script>
 </body>
 </html>

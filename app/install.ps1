@@ -37,22 +37,29 @@ if (-not $time) { Write-Host "Время «$t» не распознано, ус�
 $arg      = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$remind`""
 $action   = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg
 $trigger  = New-ScheduledTaskTrigger -Daily -At $time
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 12)
 Register-ScheduledTask -TaskName 'Risovanie' -Description 'Задание по рисованию на день' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
 
-# ярлык на рабочем столе
+# ярлык на рабочем столе: если он уже есть (даже переименованный или с другой иконкой),
+# обновляется только путь к программе, имя и иконка остаются
 $desk = [Environment]::GetFolderPath('Desktop')
 $ws = New-Object -ComObject WScript.Shell
-$lnk = $ws.CreateShortcut((Join-Path $desk 'Рисование.lnk'))
+$lnk = $null
+foreach ($f in Get-ChildItem -Path $desk -Filter *.lnk -File -ErrorAction SilentlyContinue) {
+    $sc = $ws.CreateShortcut($f.FullName)
+    if ($sc.Arguments -like '*remind.ps1*-Manual*') { $lnk = $sc; break }
+}
+if (-not $lnk) {
+    $lnk = $ws.CreateShortcut((Join-Path $desk 'Рисование.lnk'))
+    $lnk.IconLocation = 'imageres.dll,190'
+}
 $lnk.TargetPath = 'powershell.exe'
 $lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$remind`" -Manual"
 $lnk.WorkingDirectory = $root
-$lnk.IconLocation = 'imageres.dll,190'
 $lnk.Save()
 
 Write-Host ''
 Write-Host ("Напоминание установлено: ежедневно в " + $time.ToString('HH:mm') + ", кроме воскресенья.") -ForegroundColor Green
 Write-Host 'Если компьютер в это время выключен, программа откроется после включения.'
-Write-Host 'Ярлык «Рисование» на рабочем столе открывает программу в любое время.'
+Write-Host ('Ярлык «' + [IO.Path]::GetFileNameWithoutExtension($lnk.FullName) + '» на рабочем столе открывает программу в любое время.')
 Write-Host ''
-if (-not $Keep) { & $remind -Manual }

@@ -70,6 +70,21 @@ function renderWeeks(){
 $('openPlan').onclick = () => { $('drawer').hidden = false; };
 $('closePlan').onclick = () => { $('drawer').hidden = true; };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').hidden = true; });
+
+/* ---------- полезные ссылки ---------- */
+(function renderLinks(){
+  const ul = $('links');
+  (window.LINKS || []).forEach(l => {
+    const li = document.createElement('li'), a = document.createElement('a');
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    let host = ''; try { host = new URL(l.url).hostname.replace(/^www\./, ''); } catch(e){}
+    a.innerHTML = '<span class="lt"></span><span class="ln"></span><span class="lh"></span>';
+    a.querySelector('.lt').textContent = l.title;
+    a.querySelector('.ln').textContent = l.note || '';
+    a.querySelector('.lh').textContent = host;
+    li.appendChild(a); ul.appendChild(li);
+  });
+})();
 $('copyNotes').onclick = () => {
   const lines = [];
   DAYS.forEach((x, i) => { const n = store.get('note.'+i, ''); if (n.trim()) lines.push(`Неделя ${x.wi+1}, «${x.d.t}». ${n.trim()}`); });
@@ -85,17 +100,20 @@ const VIEW_NAMES = { shapes: 'Формы', mannequin: 'Манекен', refs: '�
 function setTab(t){
   tab = t;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  const is3d = t !== 'refs';
+  const is3d = t === 'shapes' || t === 'mannequin';
   const tool = document.querySelector('.tool');
-  tool.classList.remove('mode-shapes','mode-mannequin','mode-refs'); tool.classList.add('mode-'+t);
+  tool.classList.remove('mode-shapes','mode-mannequin','mode-refs','mode-links'); tool.classList.add('mode-'+t);
   $('view3d').style.display = is3d ? '' : 'none';
-  $('viewRefs').hidden = is3d;
+  $('viewRefs').hidden = t !== 'refs';
+  $('viewLinks').hidden = t !== 'links';
   showCover(false);
-  if (is3d){ three.mode(t); } else { showRef(refIdx < 0 ? randomRefIndex() : refIdx); }
+  if (is3d) three.mode(t);
+  else if (t === 'refs') showRef(refIdx < 0 ? randomRefIndex() : refIdx);
   updateCaptions();
   restartTimer();
 }
 function updateCaptions(){
+  if (tab === 'links'){ $('capView').textContent = ''; $('capInfo').textContent = ''; return; }
   if (tab === 'refs'){
     $('capView').textContent = refIdx >= 0 ? refs[refIdx].name.replace(/^.*\//,'') : '';
     $('capInfo').textContent = refIdx >= 0 ? `Изображение ${refIdx+1} из ${refs.length}` : '';
@@ -115,7 +133,7 @@ let tLeft = 0, tHandle = null;
 function restartTimer(){
   clearInterval(tHandle);
   const sec = timerSec;
-  if (!sec){ $('timer').hidden = true; return; }
+  if (!sec || tab === 'links'){ $('timer').hidden = true; return; }
   tLeft = sec; tick();
   tHandle = setInterval(() => { tLeft--; if (tLeft <= 0){ beep(); nextThing(); tLeft = sec; } tick(); }, 1000);
 }
