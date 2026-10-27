@@ -199,6 +199,7 @@ const three = (function(){
 
   const scene = new T.Scene();
   scene.background = new T.Color(0xded4c3);
+  let toon = false;
   const camera = new T.PerspectiveCamera(35, 1, 0.1, 200);
   const controls = new T.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.1;
@@ -265,8 +266,17 @@ const three = (function(){
     });
   }
   const matTones = makeTones(false), floorTones = makeTones(true);
-  const bgStd = scene.background.clone(), bgTones = new T.Color(TONES.mid);
-  let toon = false;
+  // яркость фона: в обычном режиме плавно от тёмного к светлому,
+  // в режиме «3 тона» ползунок выбирает один из трёх тонов
+  const BG_DARK = new T.Color(0x3E342D), BG_LIGHT = new T.Color(0xF3EDE2);
+  function applyBackground(){
+    const v = +$('bgLevel').value;
+    if (toon) scene.background = new T.Color(v < 34 ? TONES.dark : v < 67 ? TONES.mid : TONES.light);
+    else scene.background = BG_DARK.clone().lerp(BG_LIGHT, v/100);
+  }
+  $('bgLevel').value = store.get('bg', 85);
+  $('bgLevel').oninput = () => { store.set('bg', +$('bgLevel').value); applyBackground(); };
+  applyBackground();
   const M = () => toon ? matTones : matStd;
   const MA = () => toon ? matTones : matStdAcc;
 
@@ -277,7 +287,7 @@ const three = (function(){
   function refreshMaterials(){
     scene.traverse(o => { if (o.isMesh && o !== floor && o !== lampDot) o.material = o.userData.acc ? MA() : M(); });
     floor.material = toon ? floorTones : floorStd;
-    scene.background = toon ? bgTones : bgStd;
+    applyBackground();
     lampDot.visible = !toon;
     renderer.setPixelRatio(toon ? window.devicePixelRatio : smoothRatio());
     renderer.domElement.style.imageRendering = toon ? 'pixelated' : '';
