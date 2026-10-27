@@ -1,4 +1,6 @@
 ﻿# Ставит ежедневное напоминание в Планировщик заданий Windows.
+# С ключом -Keep не задаёт вопросов: сохраняет текущее время напоминания и обновляет только путь к программе.
+param([switch]$Keep)
 $ErrorActionPreference = 'Stop'
 $app    = $PSScriptRoot
 $root   = Split-Path -Parent $app
@@ -8,12 +10,19 @@ Get-ChildItem -Path $root -Recurse -File | Unblock-File -ErrorAction SilentlyCon
 
 $utc = [DateTime]::UtcNow.Date.AddHours(16)
 $def = [TimeZoneInfo]::ConvertTimeFromUtc($utc, [TimeZoneInfo]::Local).ToString('HH:mm')
+$old = Get-ScheduledTask -TaskName 'Risovanie' -ErrorAction SilentlyContinue
+if ($old -and $old.Triggers.Count -gt 0) {
+    try { $def = ([DateTime]$old.Triggers[0].StartBoundary).ToString('HH:mm') } catch {}
+}
 
-Write-Host ''
-Write-Host 'Напоминание о рисовании' -ForegroundColor Yellow
-Write-Host "16:00 по Гринвичу соответствует $def по времени этого компьютера."
-$t = Read-Host "Время напоминания (Enter — оставить $def, или введите другое, например 15:30)"
-if ([string]::IsNullOrWhiteSpace($t)) { $t = $def }
+if (-not $Keep) {
+    Write-Host ''
+    Write-Host 'Напоминание о рисовании' -ForegroundColor Yellow
+    Write-Host "16:00 по Гринвичу соответствует $def по времени этого компьютера."
+    $t = Read-Host "Время напоминания (Enter — оставить $def, или введите другое, например 15:30)"
+    if ([string]::IsNullOrWhiteSpace($t)) { $t = $def }
+} else { $t = $def }
+
 function Read-Time([string]$v) {
     if ($v.Trim() -match '^(\d{1,2})\s*[:.,\-]?\s*(\d{2})$') {
         $h = [int]$Matches[1]; $m = [int]$Matches[2]
@@ -45,4 +54,4 @@ Write-Host ("Напоминание установлено: ежедневно �
 Write-Host 'Если компьютер в это время выключен, программа откроется после включения.'
 Write-Host 'Ярлык «Рисование» на рабочем столе открывает программу в любое время.'
 Write-Host ''
-& $remind -Manual
+if (-not $Keep) { & $remind -Manual }
