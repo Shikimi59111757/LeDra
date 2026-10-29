@@ -21,16 +21,20 @@
       <div class="row"><dt>Разминка<span>5 мин</span></dt><dd id="warm"></dd></div>
       <div class="row"><dt>Задание<span id="mainDur">15 мин</span></dt><dd id="main"></dd></div>
       <div class="row figure" id="exampleRow"><dt>Схема</dt><dd id="example"></dd></div>
-      <div class="row"><dt><label for="note">Наблюдения</label></dt><dd><textarea id="note" rows="3"></textarea></dd></div>
+      <div class="row drop-row"><dt>Мой рисунок</dt><dd>
+        <div class="drop" id="drop" tabindex="0" role="button"><span id="dropText">Перетащите или вставьте изображение</span></div>
+        <input type="file" id="workFiles" accept="image/*" multiple hidden>
+      </dd></div>
     </dl>
 
-    <div class="nav">
-      <button class="btn ghost" id="prev" aria-label="Предыдущее занятие">Назад</button>
-      <button class="btn primary" id="done">Задание выполнено</button>
-    </div>
-    <div class="nav secondary">
-      <button class="link" id="openPlan">План программы</button>
-      <button class="link" id="copyNotes">Копировать наблюдения</button>
+    <div class="task-foot">
+      <div class="nav">
+        <button class="btn ghost" id="prev" aria-label="Предыдущее занятие">Назад</button>
+        <button class="btn primary" id="done">Задание выполнено</button>
+      </div>
+      <div class="nav secondary">
+        <button class="link" id="openPlan">План программы</button>
+      </div>
     </div>
 
     <div class="drawer" id="drawer" hidden>

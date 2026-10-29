@@ -53,7 +53,7 @@ button,input,textarea{font:inherit;color:inherit}
 }
 
 /* ---------- левая колонка ---------- */
-.task{overflow:auto;padding:22px 26px 26px;display:flex;flex-direction:column}
+.task{overflow:auto;padding:22px 26px 0;display:flex;flex-direction:column}
 .meta{display:flex;justify-content:space-between;font:400 12px/1 var(--mono);color:var(--muted);letter-spacing:.02em}
 .ticks{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin:12px 0 20px}
 .ticks .wk{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
@@ -79,6 +79,17 @@ textarea{
 textarea:focus{background:#fbf8f2}
 
 .nav{display:flex;gap:8px;margin-top:20px}
+.task-foot{margin-top:auto;position:sticky;bottom:0;z-index:2;padding:0 0 26px;background:var(--sheet);background-image:var(--noise)}
+.spec .drop-row{align-items:center}
+.drop-row dd{max-width:none}
+.drop:focus-visible{outline:none;border-style:solid;border-color:var(--ink);color:var(--ink)}
+.drop{display:flex;align-items:center;justify-content:center;min-height:38px;padding:6px 16px;border:1px dashed var(--muted);border-radius:999px;background:var(--sheet-2);color:var(--muted);font-size:13.5px;line-height:1.3;text-align:center;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.drop:hover{border-color:var(--ink);color:var(--ink)}
+.drop.over{border-style:solid;border-color:var(--rowan);color:var(--rowan);background:#f3e6dc}
+.drop.busy{cursor:progress}
+.drop.ok{border-style:solid;border-color:var(--moss);color:var(--moss)}
+.drop.err,.drop.ask{border-style:solid;border-color:var(--rowan);color:var(--rowan)}
+#prev{width:102px;flex:none}
 .nav.secondary{margin-top:12px;justify-content:space-between}
 .btn{
   border:1px solid var(--ink);border-radius:999px;padding:9px 18px;cursor:pointer;
@@ -145,7 +156,7 @@ textarea:focus{background:#fbf8f2}
 .empty{max-width:380px;text-align:center;padding:24px}
 .empty-title{font:300 30px/1.1 var(--serif);margin:0 0 10px}
 .empty p{margin:0 0 18px;color:var(--muted)}
-.drop{outline:2px dashed var(--rowan);outline-offset:-10px}
+.stage.dragging{outline:2px dashed var(--rowan);outline-offset:-10px}
 
 .cover{position:absolute;inset:0;background:var(--sheet);background-image:var(--noise),var(--fibre);display:none;align-items:center;justify-content:center;z-index:5}
 .cover.show{display:flex}

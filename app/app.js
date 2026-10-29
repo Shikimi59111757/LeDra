@@ -34,8 +34,8 @@ function renderDay(){
   const ex = (window.EXAMPLES || {})[d.ex] || '';
   $('example').innerHTML = ex;
   $('exampleRow').style.display = ex ? '' : 'none';
-  $('note').value = store.get('note.'+dayIdx, '');
   $('prev').disabled = dayIdx === 0;
+  setDrop('');
   $('done').textContent = dayIdx === DAYS.length-1 ? 'Программа завершена' : 'Задание выполнено';
   if (d.tool && d.tool !== 'none') setTab(d.tool);
   renderWeeks();
@@ -44,7 +44,6 @@ function renderDay(){
 function goDay(i){ dayIdx = Math.min(Math.max(i,0), DAYS.length-1); store.set('day', dayIdx); renderDay(); }
 $('done').onclick = () => { if (dayIdx < DAYS.length-1) goDay(dayIdx+1); };
 $('prev').onclick = () => goDay(dayIdx-1);
-$('note').oninput = e => store.set('note.'+dayIdx, e.target.value);
 
 function renderWeeks(){
   const box = $('weeks'); box.innerHTML = '';
@@ -85,14 +84,139 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').
     li.appendChild(a); ul.appendChild(li);
   });
 })();
-$('copyNotes').onclick = () => {
-  const lines = [];
-  DAYS.forEach((x, i) => { const n = store.get('note.'+i, ''); if (n.trim()) lines.push(`Неделя ${x.wi+1}, «${x.d.t}». ${n.trim()}`); });
-  const text = lines.join('\n') || 'Наблюдений пока нет';
-  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
-    () => { $('copyNotes').textContent = 'Наблюдения скопированы'; setTimeout(()=>$('copyNotes').textContent='Копировать наблюдения', 1600); },
-    () => prompt('Скопируйте текст:', text));
-};
+
+/* ---------- загрузка работ в папку «Работы» ---------- */
+const works = (function(){
+  const DB = 'ledra', STORE = 'handles', KEY = 'works';
+  function idb(mode, fn){
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(STORE);
+      r.onerror = () => rej(r.error);
+      r.onsuccess = () => { try { const tx = r.result.transaction(STORE, mode); const q = fn(tx.objectStore(STORE)); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); } catch(e){ rej(e); } };
+    });
+  }
+  const getHandle = () => idb('readonly', st => st.get(KEY)).catch(() => null);
+  const putHandle = h => idb('readwrite', st => st.put(h, KEY)).catch(() => {});
+
+  async function folder(){
+    let h = await getHandle();
+    if (h){
+      let p = await h.queryPermission({ mode: 'readwrite' });
+      if (p !== 'granted') p = await h.requestPermission({ mode: 'readwrite' });
+      if (p === 'granted') return h;
+    }
+    h = await window.showDirectoryPicker({ id: 'ledra-works', mode: 'readwrite', startIn: 'desktop' });
+    // если выбрана папка программы, сохраняем во вложенную «Работы»
+    try { await h.getFileHandle('Программа.html'); h = await h.getDirectoryHandle('Работы', { create: true }); } catch(e){}
+    await putHandle(h);
+    return h;
+  }
+  function today(){
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    return `${z(d.getDate())}.${z(d.getMonth()+1)}.${d.getFullYear()}`;
+  }
+  async function nextIndex(dir, date){
+    let max = 0;
+    const re = new RegExp('^' + date.replace(/\./g, '\\.') + ' (\\d+)\\.(jpe?g|png|webp)$', 'i');
+    for await (const name of dir.keys()){ const m = name.match(re); if (m) max = Math.max(max, +m[1]); }
+    return max + 1;
+  }
+  function toJpeg(file){
+    if (/^image\/jpe?g$/i.test(file.type)) return Promise.resolve(file);
+    return new Promise((res, rej) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url); c.toBlob(b => b ? res(b) : rej(new Error('convert')), 'image/jpeg', 0.92);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('read')); };
+      img.src = url;
+    });
+  }
+  async function save(files){
+    const dir = await folder(), date = today();
+    let n = await nextIndex(dir, date);
+    const saved = [];
+    for (const f of files){
+      const blob = await toJpeg(f), name = `${date} ${n++}.jpg`;
+      const fh = await dir.getFileHandle(name, { create: true });
+      const w = await fh.createWritable(); await w.write(blob); await w.close();
+      saved.push(name);
+    }
+    return saved;
+  }
+  function download(files){
+    const date = today(); let n = 1;
+    return Promise.all([...files].map(async f => {
+      const blob = await toJpeg(f), a = document.createElement('a'), name = `${date} ${n++}.jpg`;
+      a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      return name;
+    }));
+  }
+  return { save, download, supported: 'showDirectoryPicker' in window };
+})();
+const DROP_IDLE = 'Перетащите или вставьте изображение';
+let pending = null, dropTimer = null;
+function setDrop(state, text){
+  const d = $('drop'); clearTimeout(dropTimer);
+  d.classList.remove('over', 'busy', 'ok', 'err', 'ask');
+  if (state) d.classList.add(state);
+  $('dropText').textContent = text || DROP_IDLE;
+  if (state === 'ok' || state === 'err') dropTimer = setTimeout(() => setDrop(''), 6000);
+}
+let saveQueue = Promise.resolve();
+function saveWorks(files){
+  saveQueue = saveQueue.then(() => saveNow(files));
+  return saveQueue;
+}
+async function saveNow(files){
+  pending = files;
+  setDrop('busy', 'Сохранение…');
+  try {
+    const names = works.supported ? await works.save(files) : await works.download(files);
+    pending = null;
+    setDrop('ok', 'Сохранено: ' + names.join(', '));
+  } catch(err){
+    const n = err && err.name;
+    if (n === 'SecurityError' || n === 'NotAllowedError') setDrop('ask', 'Нажмите, чтобы сохранить в папку «Работы»');
+    else { pending = null; setDrop('err', n === 'AbortError' ? 'Папка не выбрана' : 'Не удалось сохранить изображение'); }
+  }
+}
+const imagesOf = list => [...(list || [])].filter(f => f && f.type && f.type.startsWith('image/'));
+async function imageFromTransfer(dt){
+  const files = imagesOf(dt.files);
+  if (files.length) return files;
+  // изображение, перетащенное со страницы без файла: пробуем скачать по адресу
+  let url = dt.getData('text/uri-list') || '';
+  const html = dt.getData('text/html');
+  if (html){ const m = html.match(/<img[^>]+src="([^"]+)"/i); if (m) url = m[1].replace(/&amp;/g, '&'); }
+  url = url.split('\n').find(u => u && !u.startsWith('#'));
+  if (!url) return [];
+  try {
+    const r = await fetch(url); const b = await r.blob();
+    if (!b.type.startsWith('image/')) return [];
+    return [new File([b], 'image', { type: b.type })];
+  } catch(e){ return null; }
+}
+const drop = $('drop');
+drop.addEventListener('click', () => { if (pending) saveWorks(pending); else $('workFiles').click(); });
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); drop.click(); } });
+$('workFiles').onchange = e => { const f = imagesOf(e.target.files); e.target.value = ''; if (f.length) saveWorks(f); };
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('over'); }));
+drop.addEventListener('dragleave', e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove('over'); });
+drop.addEventListener('drop', async e => {
+  e.preventDefault(); e.stopPropagation(); drop.classList.remove('over');
+  const f = await imageFromTransfer(e.dataTransfer);
+  if (f && f.length) saveWorks(f); else setDrop('err', 'Не удалось получить изображение');
+});
+document.addEventListener('paste', e => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const f = imagesOf([...(e.clipboardData && e.clipboardData.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()));
+  if (f.length){ e.preventDefault(); saveWorks(f); }
+});
 
 /* ---------- вкладки ---------- */
 let tab = 'mannequin';
@@ -196,9 +320,9 @@ function addFiles(files){
 }
 document.querySelectorAll('.addFiles').forEach(inp => inp.onchange = e => { setTab('refs'); addFiles(e.target.files); e.target.value = ''; });
 const stage = $('stage');
-stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('drop'); });
-stage.addEventListener('dragleave', () => stage.classList.remove('drop'));
-stage.addEventListener('drop', e => { e.preventDefault(); stage.classList.remove('drop'); if (e.dataTransfer.files.length){ setTab('refs'); addFiles(e.dataTransfer.files); } });
+stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('dragging'); });
+stage.addEventListener('dragleave', () => stage.classList.remove('dragging'));
+stage.addEventListener('drop', e => { e.preventDefault(); stage.classList.remove('dragging'); if (e.dataTransfer.files.length){ setTab('refs'); addFiles(e.dataTransfer.files); } });
 
 /* ---------- 3D ---------- */
 let lastKind = 'any';
